@@ -470,6 +470,136 @@
     line-height: 1.6;
   }
 
+  /* ── SYNC PANEL ── */
+  .sync-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px;
+    max-width: 640px;
+    margin-top: 20px;
+  }
+  .sync-section {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sync-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .sync-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .12em;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sync-label .dot-live {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--gap-up);
+    display: inline-block;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:.3; }
+  }
+  .sync-code {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    word-break: break-all;
+    line-height: 1.6;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  .sync-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn-green {
+    padding: 9px 20px;
+    background: #0d2e1a;
+    border: 1px solid var(--gap-up);
+    border-radius: 6px;
+    color: var(--gap-up);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .15s;
+  }
+  .btn-green:hover { background: #163d24; }
+
+  .btn-red {
+    padding: 9px 20px;
+    background: #2a0d14;
+    border: 1px solid var(--uc);
+    border-radius: 6px;
+    color: var(--uc);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .15s;
+  }
+  .btn-red:hover { background: #3d1320; }
+
+  .import-drop {
+    border: 2px dashed var(--border2);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+    margin-bottom: 10px;
+  }
+  .import-drop:hover, .import-drop.drag-over {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .import-drop input { display: none; }
+
+  .merge-opts { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .merge-opt {
+    padding: 5px 14px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .12s;
+  }
+  .merge-opt.active { border-color: var(--accent); background: #0d2535; color: var(--accent); }
+
+  .import-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    min-height: 18px;
+    margin-top: 6px;
+  }
+
+  .sync-info {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+  .sync-info b { color: var(--text); }
+
   @media (max-width: 600px) {
     .stats-bar { grid-template-columns: repeat(2, 1fr); }
     .form-row { grid-template-columns: 1fr; }
@@ -485,10 +615,12 @@
     <div class="logo-title">⚡ Scan Repeat Tracker</div>
     <div class="logo-sub">30-DAY ROLLING · MULTI-SCAN FREQUENCY ANALYSIS · NSE/BSE</div>
   </div>
+  <div id="sync-indicator" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#526070;align-self:center;"></div>
   <nav class="nav">
     <button class="nav-btn active" onclick="showView('leaderboard', this)">📊 Leaderboard</button>
     <button class="nav-btn" onclick="showView('entry', this)">➕ Add Scan</button>
     <button class="nav-btn" onclick="showView('heatmap', this)">🔥 Heatmap</button>
+    <button class="nav-btn" onclick="showView('sync', this)">🔄 Sync</button>
   </nav>
 </header>
 
@@ -532,7 +664,8 @@
       <button class="pill-btn blue" onclick="setSort('streak',this)">By Streak</button>
       <button class="pill-btn blue" onclick="setSort('recent',this)">Most Recent</button>
     </div>
-    <div style="margin-left:auto">
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button class="btn-secondary" onclick="loadFromServer()">🔄 Refresh</button>
       <button class="btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
     </div>
   </div>
@@ -591,11 +724,73 @@
   </div>
 </div>
 
+
+<!-- SYNC VIEW -->
+<div class="view" id="view-sync">
+  <div class="sync-panel" style="max-width:640px">
+    <div class="panel-title">🔄 Sync Between Devices</div>
+    <div style="background:#0d2e1a;border:1px solid #00e5a044;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#00e5a0;font-family:'Share Tech Mono',monospace;">
+      ✓ LIVE MODE — Data is stored in Google Sheets and shared in real time with anyone who opens your link.
+    </div>
+
+    <!-- EXPORT -->
+    <div class="sync-section">
+      <div class="sync-label"><span class="dot-live"></span>STEP 1 — EXPORT FROM THIS DEVICE</div>
+      <div class="sync-info">Click <b>Export JSON</b> to download your full database as a file.<br>Send it to your other device via WhatsApp / Telegram / Google Drive / Email.</div>
+      <div class="sync-code" id="json-preview">{}</div>
+      <div class="sync-btns">
+        <button class="btn-primary" onclick="exportJSON()">⬇ Export JSON File</button>
+        <button class="btn-secondary" onclick="copyJSON()">📋 Copy to Clipboard</button>
+      </div>
+      <div id="copy-status" style="font-family:'Share Tech Mono',monospace;font-size:11px;min-height:18px;margin-top:6px;"></div>
+    </div>
+
+    <!-- IMPORT -->
+    <div class="sync-section">
+      <div class="sync-label">STEP 2 — IMPORT ON OTHER DEVICE</div>
+      <div class="sync-info" style="margin-bottom:12px">Open this app on your other device → <b>Sync tab</b> → import the JSON file you sent.<br>Choose how to handle conflicts:</div>
+      <div class="merge-opts">
+        <button class="merge-opt active" id="mergeBtn" onclick="setMerge('merge',this)">🔀 Merge (keep both)</button>
+        <button class="merge-opt" onclick="setMerge('replace',this)">♻ Replace (overwrite all)</button>
+      </div>
+      <div class="import-drop" id="dropZone"
+        onclick="document.getElementById('fileInput').click()"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="this.classList.remove('drag-over');handleDrop(event)">
+        <input type="file" id="fileInput" accept=".json" onchange="handleFileInput(event)" />
+        📂 Tap / click to select JSON file &nbsp;—&nbsp; or drag &amp; drop here
+      </div>
+      <div class="sync-btns">
+        <button class="btn-secondary" onclick="pasteAndImport()">📋 Paste JSON &amp; Import</button>
+      </div>
+      <div id="import-status" style="font-family:'Share Tech Mono',monospace;font-size:11px;min-height:18px;margin-top:6px;"></div>
+    </div>
+
+    <!-- GUIDE -->
+    <div class="sync-section">
+      <div class="sync-label">HOW TO SYNC — QUICK GUIDE</div>
+      <div class="sync-info">
+        <b>Desktop → Mobile</b><br>
+        1. Desktop: click Export JSON → send file to yourself on WhatsApp/Telegram<br>
+        2. Mobile: download the file → open app → Sync → tap to import<br><br>
+        <b>Mobile → Desktop</b><br>
+        1. Mobile: Export JSON → share to yourself<br>
+        2. Desktop: Sync tab → select the file<br><br>
+        <b>Merge</b> = both devices had new entries → combines everything<br>
+        <b>Replace</b> = one device is the master → overwrites the other completely
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Tooltip -->
 <div class="tooltip-box" id="tooltip"></div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────
+const API_URL = "https://script.google.com/macros/s/AKfycbxt-wpE8h83nZTmBzKMznLG7JptZHPr2jnKP86oimiURH56c82atS504UCKfswh0DHTUw/exec";
+
 const SCAN_TYPES = ["Gap Up","Top Gainer","4%+ Mover","Upper Circuit"];
 
 const COLORS = {
@@ -619,10 +814,63 @@ window.addEventListener('DOMContentLoaded', () => {
   updateSelectColor();
   document.getElementById('entryText').addEventListener('input', updateDetect);
   render();
+  loadFromServer();
 });
+
+async function loadFromServer() {
+  showSyncIndicator('loading');
+  try {
+    const res = await fetch(API_URL);
+    const json = await res.json();
+    if (json.ok && json.scanLog) {
+      scanLog = json.scanLog;
+      localStorage.setItem('scanLog', JSON.stringify(scanLog));
+      render();
+      refreshSyncPreview();
+      showSyncIndicator('ok');
+    } else {
+      showSyncIndicator('offline');
+    }
+  } catch(e) {
+    showSyncIndicator('offline');
+  }
+}
+
+async function saveToServer() {
+  showSyncIndicator('saving');
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'save', scanLog }),
+    });
+    const json = await res.json();
+    json.ok ? showSyncIndicator('ok') : showSyncIndicator('error');
+  } catch(e) {
+    showSyncIndicator('offline');
+  }
+}
+
+function showSyncIndicator(state) {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  const map = {
+    loading: ['🔄 Syncing...', '#39d0ff'],
+    saving:  ['💾 Saving...', '#ffa630'],
+    ok:      ['✓ Synced', '#00e5a0'],
+    offline: ['⚠ Offline — saved locally', '#ffa630'],
+    error:   ['✗ Sync failed', '#ff4f7b'],
+  };
+  const [text, color] = map[state] || ['','#526070'];
+  el.textContent = text;
+  el.style.color = color;
+  if (state === 'ok') setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
 
 function save() {
   localStorage.setItem('scanLog', JSON.stringify(scanLog));
+  refreshSyncPreview();
+  saveToServer();
 }
 
 // ── HELPERS ─────────────────────────────────────────────
@@ -905,6 +1153,7 @@ function showView(id, btn) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+id).classList.add('active');
   btn.classList.add('active');
+  if (id === 'sync') refreshSyncPreview();
 }
 
 // ── TOOLTIP ─────────────────────────────────────────────
@@ -946,6 +1195,108 @@ function exportCSV() {
   a.download = `scan_repeat_tracker_${todayStr()}.csv`;
   a.click();
 }
+
+// ── SYNC ────────────────────────────────────────────────
+let mergeMode = 'merge';
+
+function setMerge(mode, btn) {
+  mergeMode = mode;
+  document.querySelectorAll('.merge-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function refreshSyncPreview() {
+  const el = document.getElementById('json-preview');
+  if (!el) return;
+  const preview = JSON.stringify(scanLog, null, 2);
+  el.textContent = preview.length > 600 ? preview.slice(0, 600) + '\n…' : preview;
+}
+
+function exportJSON() {
+  const data = { version: 1, exportedAt: new Date().toISOString(), scanLog };
+  const json = JSON.stringify(data, null, 2);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  a.download = `scan_tracker_${todayStr()}.json`;
+  a.click();
+}
+
+function copyJSON() {
+  const data = { version: 1, exportedAt: new Date().toISOString(), scanLog };
+  const json = JSON.stringify(data, null, 2);
+  navigator.clipboard.writeText(json).then(() => {
+    showStatus('copy-status', '✓ Copied to clipboard!', '#00e5a0');
+  }).catch(() => {
+    showStatus('copy-status', '✗ Copy failed — use Export JSON instead', '#ff4f7b');
+  });
+}
+
+function handleFileInput(e) {
+  const file = e.target.files[0];
+  if (file) readAndImport(file);
+  e.target.value = '';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) readAndImport(file);
+}
+
+function readAndImport(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try { importData(ev.target.result); }
+    catch(err) { showStatus('import-status', '✗ Invalid file: ' + err.message, '#ff4f7b'); }
+  };
+  reader.readAsText(file);
+}
+
+function pasteAndImport() {
+  const text = prompt('Paste the JSON data here:');
+  if (!text) return;
+  try { importData(text); }
+  catch(err) { showStatus('import-status', '✗ Invalid JSON: ' + err.message, '#ff4f7b'); }
+}
+
+function importData(text) {
+  const parsed = JSON.parse(text);
+  const incoming = parsed.scanLog || parsed;
+  if (typeof incoming !== 'object' || Array.isArray(incoming))
+    throw new Error('Unexpected format — expected scanLog object');
+
+  const TYPES = ["Gap Up","Top Gainer","4%+ Mover","Upper Circuit"];
+
+  if (mergeMode === 'replace') {
+    scanLog = incoming;
+    save(); render();
+    showStatus('import-status', `✓ Replaced! ${Object.keys(incoming).length} days loaded.`, '#00e5a0');
+  } else {
+    let newDays = 0, newSyms = 0;
+    Object.entries(incoming).forEach(([date, day]) => {
+      if (!scanLog[date]) { scanLog[date] = {}; newDays++; }
+      TYPES.forEach(type => {
+        if (!day[type]) return;
+        const existing = new Set(scanLog[date][type] || []);
+        const before = existing.size;
+        day[type].forEach(s => existing.add(s));
+        scanLog[date][type] = [...existing];
+        newSyms += existing.size - before;
+      });
+    });
+    save(); render();
+    showStatus('import-status', `✓ Merged! +${newDays} new days, +${newSyms} new symbols.`, '#00e5a0');
+  }
+  refreshSyncPreview();
+}
+
+function showStatus(id, msg, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg; el.style.color = color;
+  setTimeout(() => { el.textContent = ''; }, 5000);
+}
+
 </script>
 </body>
 </html>
