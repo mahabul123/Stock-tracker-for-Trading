@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stock Repeat Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:       #080c10;
+    --surface:  #0d1219;
+    --card:     #111820;
+    --border:   #1e2d3d;
+    --border2:  #243447;
+    --text:     #cdd9e5;
+    --muted:    #526070;
+    --accent:   #39d0ff;
+
+    --gap-up:      #00e5a0;
+    --top-gainer:  #4d9fff;
+    --mover:       #ffa630;
+    --uc:          #ff4f7b;
+
+    --gap-bg:   #00e5a010;
+    --tg-bg:    #4d9fff10;
+    --mv-bg:    #ffa63010;
+    --uc-bg:    #ff4f7b15;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+  }
+
+  code, .mono { font-family: 'Share Tech Mono', monospace; }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(90deg, #080c10 0%, #0d1a28 50%, #080c10 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+  }
+  .logo-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .logo-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+  }
+
+  .nav { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .nav-btn {
+    padding: 6px 16px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all .15s;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn.active { background: #0d2535; border-color: var(--accent); color: var(--accent); }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 14px 28px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .stat-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .1em; }
+  .stat-value { font-size: 28px; font-weight: 700; line-height: 1.1; margin: 2px 0; }
+  .stat-sub { font-size: 10px; color: var(--muted); }
+
+  /* ── MAIN ── */
+  .view { display: none; padding: 0 28px 40px; }
+  .view.active { display: block; }
+
+  /* ── ENTRY PANEL ── */
+  .entry-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px;
+    max-width: 640px;
+  }
+
+  .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+  .form-group label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: .12em;
+    margin-bottom: 5px;
+  }
+
+  input[type=date], select, textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 5px;
+    color: var(--text);
+    padding: 9px 12px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type=date]:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  textarea { resize: vertical; min-height: 110px; line-height: 1.5; }
+
+  .detect-hint {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin: 8px 0 14px;
+  }
+  .detect-hint span { color: var(--accent); font-weight: 700; }
+
+  .btn-primary {
+    padding: 11px 28px;
+    background: #0e3a5c;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .15s;
+  }
+  .btn-primary:hover { background: #1a4f7a; }
+
+  .btn-secondary {
+    padding: 8px 18px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 5px;
+    color: var(--muted);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all .15s;
+  }
+  .btn-secondary:hover { border-color: var(--text); color: var(--text); }
+
+  /* ── SCAN TYPE INDICATOR ── */
+  .scan-badge {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: .08em;
+  }
+
+  /* ── RECENT LOG ── */
+  .recent-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .1em;
+    margin: 22px 0 10px;
+  }
+
+  .log-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .log-date {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .log-row { margin-bottom: 6px; display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+  .log-symbols { font-size: 12px; color: var(--text); display: flex; flex-wrap: wrap; gap: 4px; }
+
+  .sym-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .sym-del {
+    color: #ff4f7b;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    margin-left: 2px;
+  }
+  .sym-del:hover { color: #ff8fa3; }
+
+  /* ── LEADERBOARD ── */
+  .controls {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .ctrl-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: .1em;
+  }
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+
+  .pill-btn {
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all .12s;
+  }
+  .pill-btn:hover { border-color: #526070; color: var(--text); }
+  .pill-btn.active { border-color: #ff4f7b; background: #2a0d14; color: #ff4f7b; }
+  .pill-btn.active.blue { border-color: var(--accent); background: #0d2535; color: var(--accent); }
+
+  .lb-row {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .15s;
+  }
+  .lb-row:hover { border-color: var(--border2); }
+
+  .lb-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: rgba(57,208,255,.04);
+    border-right: 2px solid rgba(57,208,255,.12);
+    transition: width .3s ease;
+    pointer-events: none;
+  }
+
+  .lb-main {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .lb-rank {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    width: 22px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .lb-sym {
+    font-size: 16px;
+    font-weight: 700;
+    color: #e0eaf5;
+    min-width: 110px;
+    letter-spacing: .04em;
+  }
+
+  .lb-count {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    min-width: 32px;
+  }
+
+  .lb-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .streak-badge {
+    font-size: 10px;
+    color: #ffa630;
+    background: #2a1a06;
+    border: 1px solid #6b430e;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 600;
+  }
+
+  .lb-last {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  /* dots timeline */
+  .lb-dots {
+    position: relative;
+    margin-top: 8px;
+    display: flex;
+    gap: 2px;
+    align-items: center;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    cursor: default;
+  }
+  .dot-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    margin-left: 5px;
+  }
+
+  /* ── HEATMAP ── */
+  .heatmap-wrap { overflow-x: auto; }
+
+  table.hm {
+    border-collapse: collapse;
+    font-size: 9px;
+    font-family: 'Share Tech Mono', monospace;
+    white-space: nowrap;
+  }
+  table.hm th {
+    color: var(--muted);
+    text-align: left;
+    padding: 3px 6px;
+  }
+  table.hm th.date-col {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    height: 58px;
+    padding: 2px 1px;
+    font-size: 8px;
+    vertical-align: bottom;
+  }
+  table.hm td { padding: 1px 2px; }
+  table.hm td.sym-cell {
+    padding: 3px 10px 3px 4px;
+    font-size: 11px;
+    color: #c0d4e8;
+    font-weight: 600;
+  }
+  table.hm td.total-cell {
+    padding: 3px 4px 3px 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .hm-cell {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+  }
+
+  /* ── EXPORT BTN ── */
+  .export-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+    font-size: 14px;
+    border: 1px dashed var(--border2);
+    border-radius: 10px;
+  }
+  .empty a { color: var(--accent); cursor: pointer; }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── TOOLTIP ── */
+  .tooltip-box {
+    position: fixed;
+    background: #1a2535;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 999;
+    display: none;
+    max-width: 220px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 600px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr; }
+    header { padding: 12px 16px; }
+    .view, .stats-bar { padding-left: 14px; padding-right: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-title">⚡ Scan Repeat Tracker</div>
+    <div class="logo-sub">30-DAY ROLLING · MULTI-SCAN FREQUENCY ANALYSIS · NSE/BSE</div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showView('leaderboard', this)">📊 Leaderboard</button>
+    <button class="nav-btn" onclick="showView('entry', this)">➕ Add Scan</button>
+    <button class="nav-btn" onclick="showView('heatmap', this)">🔥 Heatmap</button>
+  </nav>
+</header>
+
+<!-- Stats Bar -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat-card">
+    <div class="stat-label">ACTIVE DAYS</div>
+    <div class="stat-value" id="s-days" style="color:var(--accent)">0</div>
+    <div class="stat-sub">last 30d logged</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">TOTAL ENTRIES</div>
+    <div class="stat-value" id="s-total" style="color:var(--gap-up)">0</div>
+    <div class="stat-sub">symbols logged</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">UNIQUE STOCKS</div>
+    <div class="stat-value" id="s-unique" style="color:#d2a8ff">0</div>
+    <div class="stat-sub">tracked</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">REPEAT HITS</div>
+    <div class="stat-value" id="s-repeat" style="color:var(--uc)">0</div>
+    <div class="stat-sub" id="s-repeat-sub">≥2x appearances</div>
+  </div>
+</div>
+
+<!-- LEADERBOARD VIEW -->
+<div class="view active" id="view-leaderboard">
+  <div class="controls">
+    <div class="ctrl-group">
+      <span class="ctrl-label">MIN HITS</span>
+      <button class="pill-btn active" onclick="setMin(2,this)">2+</button>
+      <button class="pill-btn" onclick="setMin(3,this)">3+</button>
+      <button class="pill-btn" onclick="setMin(4,this)">4+</button>
+      <button class="pill-btn" onclick="setMin(5,this)">5+</button>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">SORT</span>
+      <button class="pill-btn blue active" onclick="setSort('total',this)">By Count</button>
+      <button class="pill-btn blue" onclick="setSort('streak',this)">By Streak</button>
+      <button class="pill-btn blue" onclick="setSort('recent',this)">Most Recent</button>
+    </div>
+    <div style="margin-left:auto">
+      <button class="btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div id="leaderboard-list"></div>
+</div>
+
+<!-- ENTRY VIEW -->
+<div class="view" id="view-entry">
+  <div class="entry-panel">
+    <div class="panel-title">Add Today's Scan Data</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>DATE</label>
+        <input type="date" id="entryDate" />
+      </div>
+      <div class="form-group">
+        <label>SCAN TYPE</label>
+        <select id="entryType" onchange="updateSelectColor()">
+          <option value="Gap Up">Gap Up</option>
+          <option value="Top Gainer">Top Gainer</option>
+          <option value="4%+ Mover">4%+ Mover</option>
+          <option value="Upper Circuit">Upper Circuit</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>SYMBOLS — paste comma / space / newline separated</label>
+      <textarea id="entryText" placeholder="e.g.  RELIANCE TATAMOTORS INFY&#10;or paste from Chartink: WIPRO, TCS, ADANIENT&#10;&#10;Works with any separator — just paste and go."></textarea>
+    </div>
+    <div class="detect-hint">Detected: <span id="detectCount">0</span> symbols</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn-primary" onclick="addEntry()">LOG SCAN →</button>
+      <span id="entryMsg" style="font-size:12px;color:var(--gap-up);display:none">✓ Logged!</span>
+    </div>
+  </div>
+
+  <div class="recent-title" style="max-width:640px">RECENT LOG (last 10 entries)</div>
+  <div id="recent-log" style="max-width:640px"></div>
+</div>
+
+<!-- HEATMAP VIEW -->
+<div class="view" id="view-heatmap">
+  <div class="export-row">
+    <button class="btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+  <p style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;">
+    STOCK × DATE — last 30 days &nbsp;|&nbsp; hover cells for detail &nbsp;|&nbsp; red = multiple scans same day
+  </p>
+  <div class="heatmap-wrap" id="heatmap-wrap"></div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--gap-up)"></div>Gap Up</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--top-gainer)"></div>Top Gainer</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--mover)"></div>4%+ Mover</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--uc)"></div>Upper Circuit</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8b3055"></div>Multiple same day</div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip-box" id="tooltip"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const SCAN_TYPES = ["Gap Up","Top Gainer","4%+ Mover","Upper Circuit"];
+
+const COLORS = {
+  "Gap Up":       { main:"#00e5a0", bg:"#00e5a018", border:"#00e5a044" },
+  "Top Gainer":   { main:"#4d9fff", bg:"#4d9fff18", border:"#4d9fff44" },
+  "4%+ Mover":    { main:"#ffa630", bg:"#ffa63018", border:"#ffa63044" },
+  "Upper Circuit":{ main:"#ff4f7b", bg:"#ff4f7b18", border:"#ff4f7b44" },
+};
+
+const HEAT = ["#111820","#12263a","#0d3b6e","#0e5185","#1a73b5","#e67e22","#e74c3c","#c0392b"];
+
+// ── STATE ───────────────────────────────────────────────
+let scanLog = {}; // { "2025-05-01": { "Gap Up": ["SYM",...], ... } }
+let minHits  = 2;
+let sortMode = "total";
+
+// ── INIT ────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  try { scanLog = JSON.parse(localStorage.getItem('scanLog') || '{}'); } catch{}
+  document.getElementById('entryDate').value = todayStr();
+  updateSelectColor();
+  document.getElementById('entryText').addEventListener('input', updateDetect);
+  render();
+});
+
+function save() {
+  localStorage.setItem('scanLog', JSON.stringify(scanLog));
+}
+
+// ── HELPERS ─────────────────────────────────────────────
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function last30() {
+  const days = [];
+  for(let i=29;i>=0;i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+  return days;
+}
+
+function parseSymbols(text) {
+  return [...new Set(
+    text.toUpperCase()
+      .split(/[\s,;\n\t|/\\]+/)
+      .map(s => s.trim().replace(/[^A-Z0-9&\-]/g,''))
+      .filter(s => s.length >= 2 && s.length <= 20)
+  )];
+}
+
+function heatColor(count, max) {
+  if(!count) return '#111820';
+  const idx = Math.min(Math.floor((count/Math.max(max,1))*(HEAT.length-1)), HEAT.length-1);
+  return HEAT[idx];
+}
+
+// ── STATS ───────────────────────────────────────────────
+function computeStats() {
+  const days = last30();
+  const stats = {};
+
+  days.forEach(date => {
+    const day = scanLog[date] || {};
+    SCAN_TYPES.forEach(type => {
+      (day[type] || []).forEach(sym => {
+        if(!stats[sym]) stats[sym] = {total:0, byType:{}, byDate:{}, dates:[]};
+        stats[sym].total++;
+        stats[sym].byType[type] = (stats[sym].byType[type]||0)+1;
+        if(!stats[sym].byDate[date]) stats[sym].byDate[date]=[];
+        stats[sym].byDate[date].push(type);
+        stats[sym].dates.push(date);
+      });
+    });
+  });
+
+  // streak & lastSeen
+  Object.entries(stats).forEach(([sym,s]) => {
+    const dateSet = new Set(s.dates);
+    let streak = 0;
+    for(let i=0;i<days.length;i++){
+      const d = days[days.length-1-i];
+      if(dateSet.has(d)) streak++; else break;
+    }
+    s.streak = streak;
+    s.lastSeen = s.dates[s.dates.length-1] || '';
+  });
+
+  return stats;
+}
+
+// ── RENDER ALL ──────────────────────────────────────────
+function render() {
+  const stats  = computeStats();
+  const days   = last30();
+  const allEntries = Object.values(scanLog).reduce((a,day)=>
+    a + SCAN_TYPES.reduce((b,t)=>b+(day[t]?.length||0),0), 0);
+  const activeDays = Object.keys(scanLog).filter(d=>days.includes(d)).length;
+  const unique     = Object.keys(stats).length;
+  const repeats    = Object.values(stats).filter(s=>s.total>=minHits).length;
+
+  document.getElementById('s-days').textContent   = activeDays;
+  document.getElementById('s-total').textContent  = allEntries;
+  document.getElementById('s-unique').textContent = unique;
+  document.getElementById('s-repeat').textContent = repeats;
+  document.getElementById('s-repeat-sub').textContent = `≥${minHits}x appearances`;
+
+  renderLeaderboard(stats, days);
+  renderRecent();
+  renderHeatmap(stats, days);
+}
+
+// ── LEADERBOARD ─────────────────────────────────────────
+function renderLeaderboard(stats, days) {
+  const list = document.getElementById('leaderboard-list');
+
+  let entries = Object.entries(stats).filter(([,s])=>s.total>=minHits);
+
+  entries.sort((a,b)=>{
+    if(sortMode==='total')  return b[1].total  - a[1].total;
+    if(sortMode==='streak') return b[1].streak - a[1].streak;
+    if(sortMode==='recent') return b[1].lastSeen.localeCompare(a[1].lastSeen);
+    return 0;
+  });
+
+  if(!entries.length){
+    list.innerHTML = `<div class="empty">
+      No stocks with ${minHits}+ appearances yet.<br>
+      <a onclick="showView('entry', document.querySelector('.nav-btn:nth-child(2)'))">→ Add scan data first</a>
+    </div>`;
+    return;
+  }
+
+  const maxCount = entries[0][1].total;
+
+  list.innerHTML = entries.map(([sym,s], idx) => {
+    const barPct = (s.total / maxCount * 100).toFixed(1);
+    const rankColor = idx<3 ? '#ff4f7b' : '#526070';
+
+    // badges
+    const badges = SCAN_TYPES
+      .filter(t=>s.byType[t])
+      .map(t=>`<span class="scan-badge" style="color:${COLORS[t].main};background:${COLORS[t].bg};border:1px solid ${COLORS[t].border}">${t} ×${s.byType[t]}</span>`)
+      .join('');
+
+    const streak = s.streak>=2
+      ? `<span class="streak-badge">🔥 ${s.streak}d streak</span>` : '';
+
+    // dots
+    const dots = days.map(date => {
+      const types = s.byDate[date];
+      if(!types) return `<div class="dot" style="background:#1e2d3d" title="${date}"></div>`;
+      const color = types.length>1 ? '#8b3055' : COLORS[types[0]]?.main || '#39d0ff';
+      const tip = `${date}: ${types.join(', ')}`;
+      return `<div class="dot" style="background:${color}" title="${tip}"></div>`;
+    }).join('');
+
+    const countColor = heatColor(s.total, maxCount);
+
+    return `
+    <div class="lb-row">
+      <div class="lb-bar" style="width:${barPct}%"></div>
+      <div class="lb-main">
+        <div class="lb-rank" style="color:${rankColor}">#${idx+1}</div>
+        <div class="lb-sym">${sym}</div>
+        <div class="lb-count" style="color:${countColor}">${s.total}</div>
+        <div class="lb-badges">${badges}${streak}</div>
+        <div class="lb-last">last: ${s.lastSeen}</div>
+      </div>
+      <div class="lb-dots">${dots}<span class="dot-label">30d</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ── HEATMAP ─────────────────────────────────────────────
+function renderHeatmap(stats, days) {
+  const wrap = document.getElementById('heatmap-wrap');
+
+  if(!Object.keys(stats).length){
+    wrap.innerHTML = `<div class="empty">No data yet.</div>`;
+    return;
+  }
+
+  const sorted = Object.entries(stats).sort((a,b)=>b[1].total-a[1].total).slice(0,50);
+  const maxCount = sorted[0]?.[1].total || 1;
+
+  let html = `<table class="hm"><thead><tr>
+    <th>STOCK</th>
+    ${days.map(d=>`<th class="date-col">${d.slice(5)}</th>`).join('')}
+    <th style="padding-left:8px">TTL</th>
+  </tr></thead><tbody>`;
+
+  sorted.forEach(([sym,s])=>{
+    html += `<tr><td class="sym-cell">${sym}</td>`;
+    days.forEach(date=>{
+      const types = s.byDate[date];
+      if(!types){
+        html += `<td><div class="hm-cell" style="background:#111820"></div></td>`;
+      } else {
+        const color = types.length>1 ? '#8b3055' : COLORS[types[0]]?.main+'88' || '#39d0ff88';
+        const tip   = `${sym} · ${date}\n${types.join(', ')}`;
+        html += `<td><div class="hm-cell" style="background:${color};border:1px solid #1e2d3d;cursor:default" 
+          onmouseenter="showTip(event,'${tip.replace(/'/g,"\\'")}')" onmouseleave="hideTip()"></div></td>`;
+      }
+    });
+    const countColor = heatColor(s.total, maxCount);
+    html += `<td class="total-cell" style="color:${countColor}">${s.total}</td></tr>`;
+  });
+
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+}
+
+// ── RECENT LOG ──────────────────────────────────────────
+function renderRecent() {
+  const el = document.getElementById('recent-log');
+  const entries = Object.entries(scanLog)
+    .sort((a,b)=>b[0].localeCompare(a[0]))
+    .slice(0,10);
+
+  if(!entries.length){
+    el.innerHTML = `<div class="empty">No data yet. Add your first scan above.</div>`;
+    return;
+  }
+
+  el.innerHTML = entries.map(([date,day])=>{
+    const rows = SCAN_TYPES.filter(t=>day[t]?.length).map(type=>{
+      const chips = day[type].map(sym=>
+        `<span class="sym-chip">${sym}<span class="sym-del" onclick="removeSym('${date}','${type}','${sym}')">×</span></span>`
+      ).join('');
+      return `<div class="log-row">
+        <span class="scan-badge" style="color:${COLORS[type].main};background:${COLORS[type].bg};border:1px solid ${COLORS[type].border};flex-shrink:0">${type}</span>
+        <div class="log-symbols">${chips}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="log-card">
+      <div class="log-date">${date}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+// ── ACTIONS ─────────────────────────────────────────────
+function addEntry() {
+  const date = document.getElementById('entryDate').value;
+  const type = document.getElementById('entryType').value;
+  const text = document.getElementById('entryText').value;
+  const syms = parseSymbols(text);
+  if(!date || !syms.length) return;
+
+  if(!scanLog[date]) scanLog[date]={};
+  const existing = scanLog[date][type] || [];
+  scanLog[date][type] = [...new Set([...existing,...syms])];
+  save();
+
+  document.getElementById('entryText').value = '';
+  document.getElementById('detectCount').textContent = '0';
+
+  const msg = document.getElementById('entryMsg');
+  msg.style.display='inline';
+  setTimeout(()=>msg.style.display='none', 2000);
+
+  render();
+}
+
+function removeSym(date, type, sym) {
+  if(!scanLog[date]?.[type]) return;
+  scanLog[date][type] = scanLog[date][type].filter(s=>s!==sym);
+  if(!scanLog[date][type].length) delete scanLog[date][type];
+  if(!Object.keys(scanLog[date]).length) delete scanLog[date];
+  save();
+  render();
+}
+
+function updateDetect() {
+  const syms = parseSymbols(document.getElementById('entryText').value);
+  document.getElementById('detectCount').textContent = syms.length;
+}
+
+function updateSelectColor() {
+  const sel = document.getElementById('entryType');
+  const c = COLORS[sel.value];
+  sel.style.borderColor = c.main;
+  sel.style.color = c.main;
+}
+
+function setMin(n, btn) {
+  minHits = n;
+  document.querySelectorAll('#view-leaderboard .pill-btn:not(.blue)').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function setSort(mode, btn) {
+  sortMode = mode;
+  document.querySelectorAll('#view-leaderboard .pill-btn.blue').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+// ── NAVIGATION ──────────────────────────────────────────
+function showView(id, btn) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── TOOLTIP ─────────────────────────────────────────────
+function showTip(e, text) {
+  const tip = document.getElementById('tooltip');
+  tip.style.display = 'block';
+  tip.innerHTML = text.replace(/\n/g,'<br>');
+  tip.style.left = (e.clientX+14)+'px';
+  tip.style.top  = (e.clientY-10)+'px';
+}
+function hideTip() {
+  document.getElementById('tooltip').style.display='none';
+}
+
+// ── EXPORT CSV ──────────────────────────────────────────
+function exportCSV() {
+  const stats = computeStats();
+  const days = last30();
+  const rows = [['Symbol','Total','Gap Up','Top Gainer','4%+ Mover','Upper Circuit','Streak','Last Seen']];
+
+  Object.entries(stats)
+    .sort((a,b)=>b[1].total-a[1].total)
+    .forEach(([sym,s])=>{
+      rows.push([
+        sym, s.total,
+        s.byType['Gap Up']||0,
+        s.byType['Top Gainer']||0,
+        s.byType['4%+ Mover']||0,
+        s.byType['Upper Circuit']||0,
+        s.streak,
+        s.lastSeen
+      ]);
+    });
+
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `scan_repeat_tracker_${todayStr()}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>
