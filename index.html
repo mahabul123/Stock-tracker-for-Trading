@@ -92,8 +92,6 @@ table.hm td.total-cell{padding:3px 4px 3px 10px;font-size:11px;font-weight:700}
 .status-dot.loading{background:var(--accent);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .save-indicator{position:fixed;bottom:16px;right:16px;background:#0d2535;border:1px solid var(--accent);border-radius:6px;padding:8px 14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent);display:none;z-index:200}
-
-/* ── PIN MODAL ── */
 .pin-overlay{position:fixed;inset:0;background:rgba(8,12,16,.92);display:flex;align-items:center;justify-content:center;z-index:500}
 .pin-box{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:28px 32px;width:300px;text-align:center}
 .pin-title{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.15em;margin-bottom:18px}
@@ -104,11 +102,9 @@ table.hm td.total-cell{padding:3px 4px 3px 10px;font-size:11px;font-weight:700}
 .pin-error{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--uc);margin-bottom:10px;min-height:14px}
 .pin-btns{display:flex;gap:8px;justify-content:center}
 .pin-lock{font-size:11px;color:var(--muted);margin-top:10px;font-family:'Share Tech Mono',monospace}
-
 .lock-badge{font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .15s}
 .lock-badge.unlocked{border-color:var(--gap-up);color:var(--gap-up);background:#001a0e}
 .lock-badge:hover{border-color:var(--accent);color:var(--accent)}
-
 @media(max-width:600px){.stats-bar{grid-template-columns:repeat(2,1fr)}.form-row{grid-template-columns:1fr}header,.view,.stats-bar,.status-bar{padding-left:14px;padding-right:14px}}
 </style>
 </head>
@@ -116,17 +112,16 @@ table.hm td.total-cell{padding:3px 4px 3px 10px;font-size:11px;font-weight:700}
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
-  <div class="loading-text" id="loadingText">LOADING FROM SHEET...</div>
+  <div class="loading-text">LOADING FROM SHEET...</div>
 </div>
 
-<!-- PIN MODAL -->
 <div class="pin-overlay" id="pinOverlay" style="display:none">
   <div class="pin-box">
     <div class="pin-title">🔒 ENTER PIN TO CONTINUE</div>
     <input class="pin-input" type="password" id="pinInput" maxlength="6" placeholder="••••" oninput="onPinInput()" onkeydown="if(event.key==='Enter')submitPin()"/>
     <div class="pin-error" id="pinError"></div>
     <div class="pin-btns">
-      <button class="btn-primary" onclick="submitPin()" style="padding:8px 24px;font-size:13px">UNLOCK</button>
+      <button class="btn-primary" id="pinSubmitBtn" onclick="submitPin()" style="padding:8px 24px;font-size:13px">UNLOCK</button>
       <button class="btn-secondary" onclick="closePin()">CANCEL</button>
     </div>
     <div class="pin-lock">Viewing leaderboard is always free 👁</div>
@@ -148,7 +143,7 @@ table.hm td.total-cell{padding:3px 4px 3px 10px;font-size:11px;font-weight:700}
   </nav>
 </header>
 
-<div class="status-bar" id="statusBar">
+<div class="status-bar">
   <div class="status-dot loading" id="statusDot"></div>
   <span id="statusText" style="color:var(--muted)">Connecting to Google Sheet...</span>
 </div>
@@ -228,7 +223,6 @@ table.hm td.total-cell{padding:3px 4px 3px 10px;font-size:11px;font-weight:700}
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxt-wpE8h83nZTmBzKMznLG7JptZHPr2jnKP86oimiURH56c82atS504UCKfswh0DHTUw/exec";
-const CORRECT_PIN = "4590";
 
 const SCAN_TYPES = ["Gap Up","Top Gainer","4%+ Mover","Upper Circuit"];
 const COLORS = {
@@ -239,21 +233,18 @@ const COLORS = {
 };
 const HEAT = ["#111820","#12263a","#0d3b6e","#0e5185","#1a73b5","#e67e22","#e74c3c","#c0392b"];
 
-let scanLog  = {};
-let minHits  = 2;
-let sortMode = "total";
+let scanLog   = {};
+let minHits   = 2;
+let sortMode  = "total";
 let saveTimer = null;
-
-// ── PIN STATE ────────────────────────────────────────────
 let isUnlocked = false;
-let pinCallback = null; // function to call after PIN success
+let userPin    = "";
+let pinCallback = null;
 
+// ── PIN ──────────────────────────────────────────────────
 function handleAddScanClick(btn) {
-  if (isUnlocked) {
-    showView('entry', btn);
-  } else {
-    requestPin(() => showView('entry', btn));
-  }
+  if (isUnlocked) showView('entry', btn);
+  else requestPin(() => showView('entry', btn));
 }
 
 function requestPin(callback) {
@@ -265,25 +256,40 @@ function requestPin(callback) {
 }
 
 function onPinInput() {
-  const val = document.getElementById('pinInput').value;
-  if (val.length >= 4) submitPin();
+  if (document.getElementById('pinInput').value.length >= 4) submitPin();
 }
 
-function submitPin() {
+async function submitPin() {
   const val = document.getElementById('pinInput').value;
-  if (val === CORRECT_PIN) {
-    isUnlocked = true;
-    document.getElementById('pinOverlay').style.display = 'none';
-    document.getElementById('lockBadge').textContent = '🔓 UNLOCKED';
-    document.getElementById('lockBadge').classList.add('unlocked');
-    render(); // re-render to show delete buttons
-    if (pinCallback) { pinCallback(); pinCallback = null; }
-  } else {
+  if (!val) return;
+  const btn = document.getElementById('pinSubmitBtn');
+  btn.disabled = true; btn.textContent = 'CHECKING...';
+  try {
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: {"Content-Type":"text/plain"},
+      body: JSON.stringify({ action:"verifyPin", pin: val })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      isUnlocked = true;
+      userPin = val;
+      document.getElementById('pinOverlay').style.display = 'none';
+      document.getElementById('lockBadge').textContent = '🔓 UNLOCKED';
+      document.getElementById('lockBadge').classList.add('unlocked');
+      render();
+      if (pinCallback) { pinCallback(); pinCallback = null; }
+    } else {
+      throw new Error('Wrong PIN');
+    }
+  } catch(e) {
     const inp = document.getElementById('pinInput');
     document.getElementById('pinError').textContent = '✗ Wrong PIN — try again';
     inp.classList.add('shake');
     inp.value = '';
     setTimeout(() => inp.classList.remove('shake'), 400);
+  } finally {
+    btn.disabled = false; btn.textContent = 'UNLOCK';
   }
 }
 
@@ -294,14 +300,11 @@ function closePin() {
 
 function toggleLock() {
   if (isUnlocked) {
-    isUnlocked = false;
+    isUnlocked = false; userPin = '';
     document.getElementById('lockBadge').textContent = '🔒 LOCKED';
     document.getElementById('lockBadge').classList.remove('unlocked');
-    // Go back to leaderboard if on entry tab
-    const entryActive = document.getElementById('view-entry').classList.contains('active');
-    if (entryActive) {
+    if (document.getElementById('view-entry').classList.contains('active'))
       showView('leaderboard', document.querySelector('.nav-btn'));
-    }
     render();
   } else {
     requestPin(() => {});
@@ -312,7 +315,7 @@ function toggleLock() {
 async function gasGet() {
   const res = await fetch(GAS_URL + "?t=" + Date.now());
   const json = await res.json();
-  if (!json.ok) throw new Error("GAS returned ok:false on GET");
+  if (!json.ok) throw new Error("GAS error on GET");
   return json.scanLog || {};
 }
 
@@ -320,12 +323,12 @@ async function gasPost(log) {
   const res = await fetch(GAS_URL, {
     method: "POST",
     headers: {"Content-Type":"text/plain"},
-    body: JSON.stringify({ action:"save", scanLog:log, pin: CORRECT_PIN })
+    body: JSON.stringify({ action:"save", scanLog:log, pin: userPin })
   });
   try {
     const json = await res.json();
-    if (!json.ok) throw new Error(json.error || "GAS save failed");
-  } catch(e) { /* opaque response — ok */ }
+    if (!json.ok) throw new Error(json.error || "Save failed");
+  } catch(e) { /* opaque response is ok */ }
 }
 
 function setStatus(state, msg) {
@@ -341,15 +344,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('entryDate').value = todayStr();
   updateSelectColor();
   document.getElementById('entryText').addEventListener('input', updateDetect);
-  // Close PIN modal on Escape
   document.addEventListener('keydown', e => { if(e.key==='Escape') closePin(); });
-
   try {
     setStatus('loading','Loading data from Google Sheet...');
     scanLog = await gasGet();
-    setStatus('ok','Connected to Google Sheet · data loaded');
+    setStatus('ok','Connected · data loaded');
   } catch(e) {
-    setStatus('err','Could not load from sheet — check GAS deployment');
+    setStatus('err','Could not load from sheet');
     console.error(e);
   }
   document.getElementById('loadingOverlay').style.display = 'none';
@@ -360,30 +361,23 @@ window.addEventListener('DOMContentLoaded', async () => {
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 
 function last30() {
-  const days = [];
-  for(let i=29;i>=0;i--){
-    const d=new Date(); d.setDate(d.getDate()-i);
-    days.push(d.toISOString().split('T')[0]);
-  }
+  const days=[];
+  for(let i=29;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
   return days;
 }
 
 function parseSymbols(text) {
-  return [...new Set(
-    text.toUpperCase().split(/[\s,;\n\t|\/\\]+/)
-      .map(s=>s.trim().replace(/[^A-Z0-9&\-]/g,''))
-      .filter(s=>s.length>=2&&s.length<=20)
-  )];
+  return [...new Set(text.toUpperCase().split(/[\s,;\n\t|\/\\]+/).map(s=>s.trim().replace(/[^A-Z0-9&\-]/g,'')).filter(s=>s.length>=2&&s.length<=20))];
 }
 
-function heatColor(count, max) {
+function heatColor(count,max) {
   if(!count) return '#111820';
   return HEAT[Math.min(Math.floor((count/Math.max(max,1))*(HEAT.length-1)),HEAT.length-1)];
 }
 
 // ── STATS ─────────────────────────────────────────────────
 function computeStats() {
-  const days=last30(), stats={};
+  const days=last30(),stats={};
   days.forEach(date=>{
     const day=scanLog[date]||{};
     SCAN_TYPES.forEach(type=>{
@@ -398,12 +392,9 @@ function computeStats() {
     });
   });
   Object.values(stats).forEach(s=>{
-    const dateSet=new Set(s.dates);
+    const ds=new Set(s.dates),days2=last30();
     let streak=0;
-    const days2=last30();
-    for(let i=0;i<days2.length;i++){
-      if(dateSet.has(days2[days2.length-1-i])) streak++; else break;
-    }
+    for(let i=0;i<days2.length;i++){if(ds.has(days2[days2.length-1-i]))streak++;else break;}
     s.streak=streak;
     s.lastSeen=s.dates[s.dates.length-1]||'';
   });
@@ -412,15 +403,13 @@ function computeStats() {
 
 // ── RENDER ────────────────────────────────────────────────
 function render() {
-  const stats=computeStats(), days=last30();
+  const stats=computeStats(),days=last30();
   const allEntries=Object.values(scanLog).reduce((a,day)=>a+SCAN_TYPES.reduce((b,t)=>b+(day[t]?.length||0),0),0);
   const activeDays=Object.keys(scanLog).filter(d=>days.includes(d)).length;
-  const unique=Object.keys(stats).length;
-  const repeats=Object.values(stats).filter(s=>s.total>=minHits).length;
   document.getElementById('s-days').textContent=activeDays;
   document.getElementById('s-total').textContent=allEntries;
-  document.getElementById('s-unique').textContent=unique;
-  document.getElementById('s-repeat').textContent=repeats;
+  document.getElementById('s-unique').textContent=Object.keys(stats).length;
+  document.getElementById('s-repeat').textContent=Object.values(stats).filter(s=>s.total>=minHits).length;
   document.getElementById('s-repeat-sub').textContent=`≥${minHits}x appearances`;
   renderLeaderboard(stats,days);
   renderRecent();
@@ -434,8 +423,6 @@ function renderLeaderboard(stats,days) {
   if(!entries.length){list.innerHTML=`<div class="empty">No stocks with ${minHits}+ appearances yet.<br>Add scan data using the ➕ Add Scan tab.</div>`;return;}
   const maxCount=entries[0][1].total;
   list.innerHTML=entries.map(([sym,s],idx)=>{
-    const barPct=(s.total/maxCount*100).toFixed(1);
-    const rankColor=idx<3?'#ff4f7b':'#526070';
     const badges=SCAN_TYPES.filter(t=>s.byType[t]).map(t=>`<span class="scan-badge" style="color:${COLORS[t].main};background:${COLORS[t].bg};border:1px solid ${COLORS[t].border}">${t} ×${s.byType[t]}</span>`).join('');
     const streak=s.streak>=2?`<span class="streak-badge">🔥 ${s.streak}d streak</span>`:'';
     const dots=days.map(date=>{
@@ -443,9 +430,9 @@ function renderLeaderboard(stats,days) {
       if(!types) return `<div class="dot" style="background:#1e2d3d"></div>`;
       return `<div class="dot" style="background:${types.length>1?'#8b3055':COLORS[types[0]]?.main||'#39d0ff'}" title="${date}: ${types.join(', ')}"></div>`;
     }).join('');
-    return `<div class="lb-row"><div class="lb-bar" style="width:${barPct}%"></div>
+    return `<div class="lb-row"><div class="lb-bar" style="width:${(s.total/maxCount*100).toFixed(1)}%"></div>
       <div class="lb-main">
-        <div class="lb-rank" style="color:${rankColor}">#${idx+1}</div>
+        <div class="lb-rank" style="color:${idx<3?'#ff4f7b':'#526070'}">#${idx+1}</div>
         <div class="lb-sym">${sym}</div>
         <div class="lb-count" style="color:${heatColor(s.total,maxCount)}">${s.total}</div>
         <div class="lb-badges">${badges}${streak}</div>
@@ -459,11 +446,10 @@ function renderLeaderboard(stats,days) {
 function renderRecent() {
   const el=document.getElementById('recent-log');
   const entries=Object.entries(scanLog).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10);
-  if(!entries.length){el.innerHTML=`<div class="empty">No data yet. Add your first scan above.</div>`;return;}
+  if(!entries.length){el.innerHTML=`<div class="empty">No data yet.</div>`;return;}
   el.innerHTML=entries.map(([date,day])=>{
     const rows=SCAN_TYPES.filter(t=>day[t]?.length).map(type=>{
       const chips=day[type].map(sym=>{
-        // Show delete button only if unlocked
         const del=isUnlocked?`<span class="sym-del" onclick="removeSym('${date}','${type}','${sym}')">×</span>`:'';
         return `<span class="sym-chip">${sym}${del}</span>`;
       }).join('');
@@ -486,7 +472,7 @@ function renderHeatmap(stats,days) {
       if(!types) html+=`<td><div class="hm-cell" style="background:#111820"></div></td>`;
       else{
         const tip=`${sym} · ${date}\\n${types.join(', ')}`;
-        html+=`<td><div class="hm-cell" style="background:${types.length>1?'#8b3055':COLORS[types[0]]?.main+'88'||'#39d0ff88'};border:1px solid #1e2d3d;cursor:default" onmouseenter="showTip(event,'${tip}')" onmouseleave="hideTip()"></div></td>`;
+        html+=`<td><div class="hm-cell" style="background:${types.length>1?'#8b3055':COLORS[types[0]]?.main+'88'};border:1px solid #1e2d3d;cursor:default" onmouseenter="showTip(event,'${tip}')" onmouseleave="hideTip()"></div></td>`;
       }
     });
     html+=`<td class="total-cell" style="color:${heatColor(s.total,maxCount)}">${s.total}</td></tr>`;
@@ -497,14 +483,14 @@ function renderHeatmap(stats,days) {
 
 // ── ACTIONS ──────────────────────────────────────────────
 async function addEntry() {
-  if (!isUnlocked) { requestPin(() => addEntry()); return; }
+  if(!isUnlocked){requestPin(()=>addEntry());return;}
   const date=document.getElementById('entryDate').value;
   const type=document.getElementById('entryType').value;
   const text=document.getElementById('entryText').value;
   const syms=parseSymbols(text);
   if(!date||!syms.length) return;
   const btn=document.getElementById('logBtn');
-  btn.disabled=true; btn.textContent='SAVING...';
+  btn.disabled=true;btn.textContent='SAVING...';
   document.getElementById('entryMsg').style.display='none';
   document.getElementById('entryErr').style.display='none';
   if(!scanLog[date]) scanLog[date]={};
@@ -525,28 +511,28 @@ async function addEntry() {
     saveTimer=setTimeout(()=>si.style.display='none',2000);
     render();
   } catch(e) {
-    console.error('Save error:',e);
-    setStatus('err','Save failed — check GAS deployment permissions');
+    setStatus('err','Save failed');
     document.getElementById('entryErr').style.display='inline';
     setTimeout(()=>document.getElementById('entryErr').style.display='none',4000);
+    console.error(e);
   } finally {
-    btn.disabled=false; btn.textContent='LOG SCAN →';
+    btn.disabled=false;btn.textContent='LOG SCAN →';
   }
 }
 
 async function removeSym(date,type,sym) {
-  if(!isUnlocked) { requestPin(()=>removeSym(date,type,sym)); return; }
+  if(!isUnlocked){requestPin(()=>removeSym(date,type,sym));return;}
   if(!scanLog[date]?.[type]) return;
   scanLog[date][type]=scanLog[date][type].filter(s=>s!==sym);
   if(!scanLog[date][type].length) delete scanLog[date][type];
   if(!Object.keys(scanLog[date]).length) delete scanLog[date];
   try {
-    setStatus('loading','Saving to Google Sheet...');
+    setStatus('loading','Saving...');
     await gasPost(scanLog);
     scanLog=await gasGet();
-    setStatus('ok','Saved to Google Sheet ✓');
+    setStatus('ok','Saved ✓');
     render();
-  } catch(e) { setStatus('err','Save failed'); console.error(e); }
+  } catch(e){setStatus('err','Save failed');console.error(e);}
 }
 
 function updateDetect(){document.getElementById('detectCount').textContent=parseSymbols(document.getElementById('entryText').value).length;}
