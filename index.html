@@ -360,17 +360,30 @@ function setStatus(state, msg) {
 window.addEventListener("DOMContentLoaded", function(){
   document.getElementById("entryDate").value = todayStr();
   updateSelectColor();
-  setStatus("loading", "Loading data from Google Sheet...");
+
+  // ── Try cache first for instant load ──
+  var cached = sessionStorage.getItem("scanLogCache");
+  if(cached){
+    try{
+      scanLog = JSON.parse(cached);
+      document.getElementById("loadingOverlay").style.display = "none";
+      setStatus("loading", "Refreshing from sheet...");
+      render();
+    } catch(e){ cached = null; }
+  }
+
+  // ── Always fetch fresh data in background ──
   gasGet()
     .then(function(data){
       scanLog = data;
+      sessionStorage.setItem("scanLogCache", JSON.stringify(data));
       setStatus("ok", "Connected · data loaded");
-      document.getElementById("loadingOverlay").style.display = "none";
+      if(!cached) document.getElementById("loadingOverlay").style.display = "none";
       render();
     })
     .catch(function(e){
       setStatus("err", "Could not load from sheet");
-      document.getElementById("loadingOverlay").style.display = "none";
+      if(!cached) document.getElementById("loadingOverlay").style.display = "none";
       console.error(e);
     });
 });
@@ -582,10 +595,9 @@ function addEntry(){
   scanLog[date][type] = Object.keys(merged);
   setStatus("loading", "Saving to Google Sheet...");
   gasPost(scanLog).then(function(){
-    return gasGet();
-  }).then(function(data){
-    scanLog = data;
-    setStatus("ok", "Saved to Google Sheet ✓");
+    // No re-fetch — trust local data for speed
+    sessionStorage.setItem("scanLogCache", JSON.stringify(scanLog));
+    setStatus("ok", "Saved ✓");
     document.getElementById("entryText").value = "";
     document.getElementById("detectCount").textContent = "0";
     document.getElementById("entryMsg").style.display = "inline";
@@ -613,9 +625,7 @@ function removeSym(date, type, sym){
   if(!Object.keys(scanLog[date]).length) delete scanLog[date];
   setStatus("loading", "Saving...");
   gasPost(scanLog).then(function(){
-    return gasGet();
-  }).then(function(data){
-    scanLog = data;
+    sessionStorage.setItem("scanLogCache", JSON.stringify(scanLog));
     setStatus("ok", "Saved ✓");
     render();
   }).catch(function(e){ setStatus("err", "Save failed"); console.error(e); });
