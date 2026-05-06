@@ -433,7 +433,7 @@ function renderLeaderboard(stats,days) {
     return `<div class="lb-row"><div class="lb-bar" style="width:${(s.total/maxCount*100).toFixed(1)}%"></div>
       <div class="lb-main">
         <div class="lb-rank" style="color:${idx<3?'#ff4f7b':'#526070'}">#${idx+1}</div>
-        <div class="lb-sym">${sym}</div>
+        <div class="lb-sym">${sym} <span onclick="openChart('${sym}')" title="Open in TradingView" style="cursor:pointer;font-size:13px;color:var(--muted);transition:color .15s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">📈</span> <span onclick="openFundamentals('${sym}')" title="Fundamentals on Screener.in" style="cursor:pointer;font-size:13px;color:var(--muted);transition:color .15s" onmouseover="this.style.color='#ffa630'" onmouseout="this.style.color='var(--muted)'">🔍</span> <span onclick="openNSE('${sym}')" title="See on NSE" style="cursor:pointer;font-size:13px;color:var(--muted);transition:color .15s" onmouseover="this.style.color='#00e5a0'" onmouseout="this.style.color='var(--muted)'">🏛️</span></div>
         <div class="lb-count" style="color:${heatColor(s.total,maxCount)}">${s.total}</div>
         <div class="lb-badges">${badges}${streak}</div>
         <div class="lb-last">last: ${s.lastSeen}</div>
@@ -543,7 +543,16 @@ function showView(id,btn){document.querySelectorAll('.view').forEach(v=>v.classL
 function showTip(e,text){const tip=document.getElementById('tooltip');tip.style.display='block';tip.innerHTML=text.replace(/\\n/g,'<br>');tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-10)+'px';}
 function hideTip(){document.getElementById('tooltip').style.display='none';}
 
-function exportCSV(){
+function openNSE(sym) {
+  window.open(`https://www.nseindia.com/get-quotes/equity?symbol=${sym}`, '_blank');
+}
+
+  window.open(`https://www.screener.in/company/${sym}/`, '_blank');
+}
+
+  window.open(`https://www.tradingview.com/chart/?symbol=NSE%3A${sym}`, '_blank');
+}
+
   const stats=computeStats();
   const rows=[['Symbol','Total','Gap Up','Top Gainer','4%+ Mover','Upper Circuit','Streak','Last Seen']];
   Object.entries(stats).sort((a,b)=>b[1].total-a[1].total).forEach(([sym,s])=>{
