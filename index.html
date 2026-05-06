@@ -106,7 +106,21 @@ table.hm td.total-cell{padding:3px 4px 3px 10px;font-size:11px;font-weight:700}
 .pin-error{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--uc);margin-bottom:10px;min-height:14px}
 .pin-btns{display:flex;gap:8px;justify-content:center}
 .pin-lock{font-size:11px;color:var(--muted);margin-top:10px;font-family:'Share Tech Mono',monospace}
-@media(max-width:600px){.stats-bar{grid-template-columns:repeat(2,1fr)}.form-row{grid-template-columns:1fr}header,.view,.stats-bar,.status-bar{padding-left:14px;padding-right:14px}}
+@media(max-width:600px){
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .form-row{grid-template-columns:1fr}
+  header,.view,.stats-bar,.status-bar{padding-left:14px;padding-right:14px}
+  .nav{display:none}
+  .bottom-nav{display:flex}
+  .view{padding-bottom:80px}
+}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#0d1219;border-top:1px solid var(--border2);z-index:200;height:60px}
+.bottom-nav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.08em;cursor:pointer;transition:color .15s;text-decoration:none;border:none;background:none}
+.bottom-nav a.active{color:var(--accent)}
+.bottom-nav a.active .bn-icon{transform:scale(1.15)}
+.bn-icon{font-size:20px;transition:transform .15s}
+.bottom-nav a.lock-tab{color:var(--muted)}
+.bottom-nav a.lock-tab.unlocked{color:var(--gap-up)}
 </style>
 </head>
 <body>
@@ -220,7 +234,20 @@ table.hm td.total-cell{padding:3px 4px 3px 10px;font-size:11px;font-weight:700}
   </div>
 </div>
 
-<div class="tooltip-box" id="tooltip"></div>
+<div class="bottom-nav" id="bottomNav">
+  <a id="bnLB" class="active" onclick="showView('leaderboard')">
+    <span class="bn-icon">📊</span><span>LEADERS</span>
+  </a>
+  <a id="bnAdd" onclick="bnAddClick()">
+    <span class="bn-icon">➕</span><span>ADD SCAN</span>
+  </a>
+  <a id="bnHM" onclick="showView('heatmap')">
+    <span class="bn-icon">🔥</span><span>HEATMAP</span>
+  </a>
+  <a id="bnLock" class="lock-tab" onclick="toggleLock()">
+    <span class="bn-icon" id="bnLockIcon">🔒</span><span id="bnLockText">LOCKED</span>
+  </a>
+</div>
 
 <script>
 var GAS_URL = "https://script.google.com/macros/s/AKfycbxt-wpE8h83nZTmBzKMznLG7JptZHPr2jnKP86oimiURH56c82atS504UCKfswh0DHTUw/exec";
